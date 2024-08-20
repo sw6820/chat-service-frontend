@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div id="app">
+      <div id="auth-container" class="container">
+        <form id="signup-form">
+          <h2>Sign Up</h2>
+          <input type="text" id="signup-username" placeholder="Username" required>
+          <input type="email" id="signup-email" placeholder="Email" required>
+          <input type="password" id="signup-password" placeholder="Password" required>
+          <button type="submit">Sign Up</button>
+        </form>
+        <form id="login-form">
+          <h2>Login</h2>
+          <input type="email" id="login-email" placeholder="Email" required>
+          <input type="password" id="login-password" placeholder="Password" required>
+          <button type="submit">Login</button>
+        </form>
+      </div>
+      <div id="main-container" class="container" style="display: none;">
+        <div class="navbar">
+          <button id="profileBtn">Profile & Friends</button>
+          <button id="chatListBtn">Chat List</button>
+          <button id="logoutBtn">Logout</button>
+        </div>
+        <div id="profile-friends-container">
+          <div class="profile">
+            <h2>My Profile</h2>
+            <!-- Add profile details here -->
+          </div>
+          <div class="friends-list">
+            <h2>Friends List</h2>
+            <ul id="friends"></ul>
+            <form id="add-friend-form">
+              <input type="email" id="friend-identifier" placeholder="Friend's email" required>
+              <button type="submit">Add Friend</button>
+            </form>
+          </div>
+        </div>
+        <div id="chat-list-container" style="display: none;">
+          <h2>Chat List</h2>
+          <ul id="chatList"></ul>
+        </div>
+      </div>
+      <div id="chat-container" class="container" style="display:none;">
+        <div class="chat-header">
+          <div class="room-name">Chat Room</div>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+          <input type="text" id="messageInput" placeholder="Type your message here...">
+          <button type="submit" id="sendMessageBtn">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+  </body>
+</html>
