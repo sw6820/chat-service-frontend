@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   if (!window.socket) {
-    window.socket = io('http://3.36.98.23/chat'); // Connect to the chat namespace
+    window.socket = io('http://3.36.98.23:80/chat'); // Connect to the chat namespace
   }
   const socket = window.socket;
 
