@@ -1,9 +1,34 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const localhost = 'http://localhost:3000';  // Local backend
+  const backendhost = 'http://3.36.98.23:80'; // Production backend over HTTP
+
+  // Check if the current page is served locally (non-SSL), use HTTP, otherwise HTTPS
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const host = isLocal ? localhost : backendhost;
+
+  // Dynamic socket connection based on environment
+  const backendUrl = `${host}/chat`;
+
+// const host = process.env.NODE_ENV === 'prod' ? backendhost : localhost
+  console.log(`host name : ${window.location.hostname}`);
+  // const host = window.location.hostname === '127.0.0.1'
+  //   ? localhost
+  //   : backendhost;
+  // const host = 'localhost'
+  console.log(`host : ${host}`);
+  // const backendUrl = `${host}/chat`
   if (!window.socket) {
-    window.socket = io('http://3.36.98.23:80/chat'); // Connect to the chat namespace
+    // window.socket = io('http://3.36.98.23:80/chat'); // Connect to the chat namespace
+    // window.socket = io('localhost:3000/chat');
+    // Dynamically set the Socket.io server based on environment
+
+      // Production backend URL
+      // Local backend URL during development
+
+    window.socket = io(backendUrl);
   }
   const socket = window.socket;
-
+  console.log(`dom content loaded`);
   // Auth elements
   const authContainer = document.getElementById('auth-container');
   const mainContainer = document.getElementById('main-container');
@@ -51,7 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`email: ${email} password: ${password} user: ${username}`);
 
     try {
-      const response = await fetch('/auth/signup', {
+      console.log(`host: ${host}`);
+      const response = await fetch(`${host}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password }),
@@ -82,10 +108,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
-    // console.log(`email: ${email} password: ${password} `);
+    console.log(`email: ${email} password: ${password} `);
 
     try {
-      const response = await fetch('/auth/login', {
+      console.log(`host: ${host}`);
+      const response = await fetch(`${host}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -114,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fetch and display friends list
   async function fetchAndDisplayFriends() {
     try {
-      const response = await fetch('/users/friends', {
+      const response = await fetch(`${host}/users/friends`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -155,8 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function checkSession() {
+    console.log('Checking session');
     try {
-      const response = await fetch('/auth/check-session', {
+      const response = await fetch(`${host}/auth/check-session`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -180,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Logout
   logoutBtn.addEventListener('click', async () => {
     try {
-      const response = await fetch('/auth/logout', { method: 'POST' });
+      const response = await fetch(`${host}/auth/logout`, { method: 'POST' });
       if (response.ok) {
         currentUser = null;
         showAuthContainer();
@@ -200,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`Friend: ${friendEmail}`);
 
     try {
-      const response = await fetch('/users/add-friend', {
+      const response = await fetch(`${host}/users/add-friend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ friendEmail }),
@@ -314,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target && e.target.tagName === 'LI') {
       const friendId = e.target.dataset.friendId;
       try {
-        const response = await fetch('/rooms/find-or-create', {
+        const response = await fetch(`${host}/rooms/find-or-create`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ friendId }),
@@ -338,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadChatRoom(roomId) {
     try {
-      const response = await fetch(`/chat/rooms/${roomId}/logs`, {
+      const response = await fetch(`${host}/chat/rooms/${roomId}/logs`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -380,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fetch and display chat list
   async function fetchAndDisplayChats() {
     try {
-      const response = await fetch('/chat', {
+      const response = await fetch(`${host}/chat`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
