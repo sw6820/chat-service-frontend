@@ -4,7 +4,7 @@ import { io } from "https://cdn.socket.io/4.7.4/socket.io.esm.min.js";
 document.addEventListener('DOMContentLoaded', () => {
   // import jwtDecode from 'jwt-decode';
   const localhost = 'http://localhost:3000';  // Local backend
-  const backendhost = 'http://3.36.98.23:80'; // Production backend over HTTP
+  const backendhost = 'https://api.stahc.uk'; // Production backend over HTTP
 
   // Check if the current page is served locally (non-SSL), use HTTP, otherwise HTTPS
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
