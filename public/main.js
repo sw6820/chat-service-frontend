@@ -320,7 +320,7 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`Sending login request to: ${host}/auth/login`);
       const response = await fetch(`${host}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${access_token}`, },
         body: JSON.stringify({ email, password }),
         credentials: 'include',
       });
@@ -584,8 +584,28 @@ async function fetchWithAuth(url, options = {}) {
     }
   });
 
+  // Add rate limiting for message sending
+  const messageRateLimit = {
+      lastMessage: 0,
+      minInterval: 500, // Minimum time between messages in ms
+  };
+
+  function canSendMessage() {
+      const now = Date.now();
+      if (now - messageRateLimit.lastMessage < messageRateLimit.minInterval) {
+          return false;
+      }
+      messageRateLimit.lastMessage = now;
+      return true;
+  }
+    
   // Send Message
   function sendMessage() {
+    if (!canSendMessage()) {
+        console.log('Please wait before sending another message');
+        return;
+    }
+
     const messageText = messageInput.value.trim();
     console.log(`msg text: ${messageText}`);
     if (!messageText) return;
