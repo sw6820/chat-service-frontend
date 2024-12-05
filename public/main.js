@@ -80,14 +80,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket = io(backendUrl, {
-      transports: ['websocket'],
-      auth: {
-        token: token
-      }
+        transports: ['websocket', 'polling'],  // Add polling as fallback
+        auth: { token },
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 10000
     });
 
-    socket.on('connect', () => {
-      console.log('Connected to server');
+    // Add reconnect listeners
+    socket.on('reconnect_attempt', () => {
+        console.log('Attempting to reconnect...');
+    });
+
+        socket.on('reconnect', () => {
+        console.log('Reconnected to server');
+        // Rejoin the current room if any
+        const currentRoomId = chatContainer.dataset.roomId;
+        if (currentRoomId) {
+            socket.emit('joinRoom', { roomId: currentRoomId });
+        }
     });
 
     socket.on('connect_error', (error) => {
@@ -136,6 +148,26 @@ document.addEventListener('DOMContentLoaded', () => {
   checkToken();
   console.log(`after check token current user : ${currentUser}`);
 
+    // Add token refresh mechanism
+  async function refreshToken() {
+      try {
+          const response = await fetch(`${host}/auth/refresh`, {
+              method: 'POST',
+              credentials: 'include'
+          });
+          
+          if (response.ok) {
+              const { access_token } = await response.json();
+              localStorage.setItem('access_token', access_token);
+              return true;
+          }
+          return false;
+      } catch (error) {
+          console.error('Token refresh failed:', error);
+          return false;
+      }
+  }
+
   async function checkToken() {
     const token = localStorage.getItem('access_token');
     if (token) {
@@ -149,6 +181,16 @@ document.addEventListener('DOMContentLoaded', () => {
           },
           credentials: 'include',
         });
+
+        if (response.status === 401) {
+            // Token expired, try to refresh
+            const refreshed = await refreshToken();
+            if (!refreshed) {
+                throw new Error('Token refresh failed');
+            }
+            // Retry with new token
+            return checkToken();
+        }
 
         console.log(`Token check response status: ${response.status}`);
 
@@ -174,8 +216,31 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       console.log('No token found, showing auth container');
       showAuthContainer();  // If no token exists, show login/signup
+      return;
     }
   }
+
+  // Update fetch headers with consistent security headers
+const defaultHeaders = {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+};
+
+// Update your fetch calls to use these headers
+async function fetchWithAuth(url, options = {}) {
+    const token = localStorage.getItem('access_token');
+    const headers = {
+        ...defaultHeaders,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...options.headers
+    };
+
+    return fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include'
+    });
+}
 
   // Sign Up
   signupForm.addEventListener('submit', async (e) => {
@@ -523,35 +588,35 @@ document.addEventListener('DOMContentLoaded', () => {
   function sendMessage() {
     const messageText = messageInput.value.trim();
     console.log(`msg text: ${messageText}`);
-    if (messageText === '') return;
+    if (!messageText) return;
 
     const roomId = chatContainer.dataset.roomId; // Assume roomId is set as a data attribute
     console.log(`client room id: ${roomId}`);
     if (!roomId) {
-      console.error('Room ID not set on chat container');
-      return;
+        console.error('No room ID found');
+        alert('Please select a chat room first');
+        return;
     }
 
-    if (!socket.connected) {
-      console.error('Socket is not connected');
-      alert('Not connected to the chat server. Please try again.');
-      return;
-    }
-
-    if (!socket || !socket.connected) {
-      console.error('no socket, Socket is not connected');
-      alert('Not connected to the chat server. Please try again.');
-      return;
+    if (!socket?.connected) {
+        console.error('Socket disconnected');
+        alert('Connection lost. Attempting to reconnect...');
+        socket?.connect();
+        return;
     }
 
     const message = {
       roomId: parseInt(roomId, 10),
       content: messageText,
       userId: currentUser.id,
+      timestamp: new Date().toISOString(),
     };
 
     console.log('Sending message(debug):', message); // Debug log
+    
+    // Clear input before sending to improve perceived performance
     messageInput.value = '';
+    
     // socket.emit('sendMessage', message);
     socket.emit('sendMessage', message, (error) => {
       if (error) {
