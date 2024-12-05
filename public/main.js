@@ -126,25 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // let token = null;
-
-  // Check if user is already logged in
-  // checkLogin();
-  // checkSession();
-
-  // {
-  //   // socket.on('connect', () => {
-  //   //   console.log('Connected to server');
-  //   // });
-  //   //
-  //   // socket.on('connect_error', (error) => {
-  //   //   console.error('Connection error:', error);
-  //   // });
-  //   //
-  //   // socket.on('disconnect', (reason) => {
-  //   //   console.log('Disconnected:', reason);
-  //   // });
-  // }
   checkToken();
   console.log(`after check token current user : ${currentUser}`);
 
@@ -268,9 +249,6 @@ async function fetchWithAuth(url, options = {}) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-
-
-             
       console.log('Sign up response:', data);
       currentUser = data.user;
       const { access_token } = data;
@@ -291,7 +269,6 @@ async function fetchWithAuth(url, options = {}) {
           initializeSocket();
         } catch (error) {
           console.error('Error with jwt_decode:', error);
-          // 오류 처리 로직
         }
       } else {
         console.error('Access token not found in response');
@@ -318,10 +295,12 @@ async function fetchWithAuth(url, options = {}) {
       const response = await fetch(`${host}/auth/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'  // Add this header
+          'Content-Type': 'application/json',  // Add this header
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ email, password }),
         credentials: 'include',
+        mode: 'cors',
       });
       console.log(`Response status: ${response.status}`);
       console.log(`response text : ${response.text}`);
@@ -329,9 +308,14 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`response body : ${JSON.stringify(response)}`);
       console.log(`response headers : ${JSON.stringify(response.headers)}`);
       console.log(`response body : ${response}`);
+      console.log('Response headers:', [...response.headers.entries()]);
 
-
-      // const data = await response.json();
+          // Get the token from Authorization header
+    const authHeader = response.headers.get('Authorization');
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      console.log('Token from header:', token);
+    }
 
       let data;
       try {
@@ -347,13 +331,7 @@ async function fetchWithAuth(url, options = {}) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // data = await response.json();
-      // console.log('Login response:', data);
       if (response.ok) {
-
-        // const data = await response.json();
-        // token = data.token;
-        // currentUser = data.user;
         console.log('Login response:', data);
         console.log('Login response data:', data);
 
@@ -365,9 +343,6 @@ async function fetchWithAuth(url, options = {}) {
           // Decode the JWT token to get user information
           // const decodedToken = jwt_decode(access_token);
           try {
-            // if (typeof jwt_decode === 'undefined') {
-            //   throw new Error('jwt_decode is not defined');
-            // }
             const decodedToken = jwt_decode(data.access_token);
             console.log(`decoded token: ${decodedToken}`);
             currentUser = {
@@ -376,25 +351,21 @@ async function fetchWithAuth(url, options = {}) {
               username: decodedToken.username
             };
             console.log('Current user after login:', currentUser);
+            console.log('Login successful:', {
+              user: currentUser,
+              token: data.access_token
+            });
             showMainContainer();
             await fetchAndDisplayFriends();
             initializeSocket();
-            // decodedToken 사용
           } catch (error) {
             console.error('Error with jwt_decode:', error);
-            // 오류 처리 로직
           }
-          // console.log(`decoded token: ${decodedToken}`);
-
-          // showMainContainer();
-          // await fetchAndDisplayFriends();
         } else {
           console.error('Access token not found in response');
           alert('Login failed: No access token received');
+          throw new Error(data.message || 'Login failed');
           // Store the token in localStorage or a cookie if not using HTTP-only cookies
-          // localStorage.setItem('access_token', access_token);
-          // showMainContainer();
-          // await fetchAndDisplayFriends();
         }
       } else {
 
@@ -403,7 +374,7 @@ async function fetchWithAuth(url, options = {}) {
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Login failed');
+      alert(error.message || 'Login failed. Please try again.');
     }
   });
 
@@ -474,9 +445,6 @@ async function fetchWithAuth(url, options = {}) {
         } else {
           console.error('Expected an array of friends');
         }
-        // token = data.token;
-        // currentUser = data.user;
-        // displayFriends(data.friends);
       } else {
         if (response.status === 401) {
           console.error('Unauthorized: Token may be invalid');
@@ -519,13 +487,13 @@ async function fetchWithAuth(url, options = {}) {
   //     if (response.ok) {
   //       const data = await response.json();
   //       currentUser = data.user;
-  //       // showChatContainer();
+  //       showChatContainer();
   //       console.log(`response data : ${data}`)
   //       console.log('show main container');
   //       showMainContainer();
   //       console.log('fetch and display friends;')
   //       await fetchAndDisplayFriends();
-  //       // addSendMessageListener(); // Add listener here
+  //       addSendMessageListener(); // Add listener here
   //     } else {
   //       showAuthContainer();
   //     }
@@ -682,8 +650,6 @@ async function fetchWithAuth(url, options = {}) {
     
     // Clear input before sending to improve perceived performance
     messageInput.value = '';
-    
-    // socket.emit('sendMessage', message);
     socket.emit('sendMessage', message, (error) => {
       if (error) {
         console.error('Error sending message:', error);
@@ -692,15 +658,9 @@ async function fetchWithAuth(url, options = {}) {
       } else {
         console.log('Message sent successfully');
         // Update UI immediately
-        // appendMessage(messageText, 'me');
-
       }
     });
-
     // Update UI immediately
-    // appendMessage(messageText, 'me', message);
-    // console.log(`after socket emitting`);
-    // messageInput.value = '';
   }
 
   function appendMessage(messageText, senderType, messageTime) {
@@ -716,12 +676,6 @@ async function fetchWithAuth(url, options = {}) {
     timestamp.classList.add('timestamp');
     timestamp.textContent = messageTime;//.toLocaleTimeString();
     console.log(`message time type : ${typeof messageTime}`);
-
-    // const senderInfo = document.createElement('div');
-    // senderInfo.classList.add('sender-info');
-    // senderInfo.textContent = senderType === 'me' ? 'other' : `User ${senderId}`;
-
-    // messageElement.appendChild(senderInfo);
     messageElement.appendChild(messageContent);
     messageElement.appendChild(timestamp);
     chatMessages.appendChild(messageElement);
@@ -730,13 +684,7 @@ async function fetchWithAuth(url, options = {}) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
-  // // Display Message
-  // socket.on('newMessage', (message) => {
-  //   console.log(`New message received: ${JSON.stringify(message)}`);
-  //   const senderType = message.user.userId === currentUser.userId ? 'me' : 'other';
-  //   appendMessage(message.content, senderType);
-  // });
-
+  // Display Message
   friendsList.addEventListener('click', async (e) => {
     if (e.target && e.target.tagName === 'LI') {
       console.log(`dataset : ${Object.keys(e.target.dataset)}`);
@@ -819,8 +767,6 @@ async function fetchWithAuth(url, options = {}) {
           console.log(`currentUser : ${JSON.stringify(currentUser)}`)
           const senderType =
             message.user.id === currentUser.userId ? 'me' : 'other';
-          // console.log(`time : ${message.createdAt}`)
-          // console.log(`time type : ${typeof message.createdAt}`)
           const formattedTime = formatMessageTime(message.createdAt);
           console.log(`Formatted time: ${formattedTime}`);
           appendMessage(message.content, senderType, formattedTime);
@@ -834,10 +780,6 @@ async function fetchWithAuth(url, options = {}) {
           console.error('Failed to load chat room');
           alert('Failed to load chat room');
         }
-        // const errorText = await response.text(); // Read the response as text
-        // console.error('Failed to load chat room:', errorText);
-        // console.log(`error: ${errorText}`);
-        // alert('Failed to load chat room');
       }
     } catch (error) {
       console.log(`error loading chat ${error}`);
