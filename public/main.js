@@ -256,7 +256,7 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`host: ${host}`);
       const response = await fetch(`${host}/auth/signup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${access_token}`, },
         body: JSON.stringify({ username, email, password }),
         credentials: 'include',
       });
