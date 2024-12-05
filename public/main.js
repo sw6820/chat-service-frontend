@@ -256,7 +256,7 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`host: ${host}`);
       const response = await fetch(`${host}/auth/signup`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${access_token}`, },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password }),
         credentials: 'include',
       });
@@ -264,42 +264,39 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`response text : ${response.text}`);
       console.log(`response: ${JSON.stringify(response)}`);
 
-      let data;
-      try {
-        data = await response.json();
-      } catch (e) {
-        console.error('Failed to parse response as JSON when signing up:', e);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      if (response.ok) {        
-        console.log('Sign up response:', data);
-        currentUser = data.user;
-        const { access_token } = data;
-        if (access_token) {
-          localStorage.setItem('access_token', access_token);
-          console.log('Access token stored in localStorage');
-          try {
-            const decodedToken = jwt_decode(access_token);
-            console.log(`decoded token: ${decodedToken}`);
-            currentUser = {
-              userId: decodedToken.sub, // 'sub' is typically used for userId in JWT
-              email: decodedToken.email,
-              username: decodedToken.username
-            };
-            console.log(`current user after sign up : ${currentUser}`);
-            showMainContainer();
-            await fetchAndDisplayFriends();
-            initializeSocket();
-          } catch (error) {
-            console.error('Error with jwt_decode:', error);
-            // 오류 처리 로직
-          }
-        } else {
-          console.error('Access token not found in response');
-          alert('Login failed: No access token received');
-        }                
+
+
+
+             
+      console.log('Sign up response:', data);
+      currentUser = data.user;
+      const { access_token } = data;
+      if (access_token) {
+        localStorage.setItem('access_token', access_token);
+        console.log('Access token stored in localStorage');
+        try {
+          const decodedToken = jwt_decode(access_token);
+          console.log(`decoded token: ${decodedToken}`);
+          currentUser = {
+            userId: decodedToken.sub, // 'sub' is typically used for userId in JWT
+            email: decodedToken.email,
+            username: decodedToken.username
+          };
+          console.log(`current user after sign up : ${currentUser}`);
+          showMainContainer();
+          await fetchAndDisplayFriends();
+          initializeSocket();
+        } catch (error) {
+          console.error('Error with jwt_decode:', error);
+          // 오류 처리 로직
+        }
       } else {
-        alert('Sign up failed');
-      }
+        console.error('Access token not found in response');
+        alert('Login failed: No access token received');
+      }                
     } catch (error) {
       console.error('Error:', error);
       alert('Sign up failed');
@@ -320,7 +317,9 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`Sending login request to: ${host}/auth/login`);
       const response = await fetch(`${host}/auth/login`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${access_token}`, },
+        headers: {
+          'Content-Type': 'application/json'  // Add this header
+        },
         body: JSON.stringify({ email, password }),
         credentials: 'include',
       });
@@ -341,6 +340,15 @@ async function fetchWithAuth(url, options = {}) {
         console.error('Failed to parse response as JSON:', e);
       }
       console.log(`after login, response data : ${JSON.stringify(data)}`);
+
+      if (!response.ok) {
+        console.error('Login failed:', data.message || 'Unknown error');
+        alert(`Login failed: ${data.message || 'Unknown error'}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // data = await response.json();
+      // console.log('Login response:', data);
       if (response.ok) {
 
         // const data = await response.json();
@@ -350,17 +358,17 @@ async function fetchWithAuth(url, options = {}) {
         console.log('Login response data:', data);
 
         // currentUser = data.user;
-        const { access_token } = data;
-        if (access_token) {
-          localStorage.setItem('access_token', access_token);
+        // const { access_token } = data;
+        if (data.access_token) {
+          localStorage.setItem('access_token', data.access_token);
           console.log('Access token stored in localStorage');
           // Decode the JWT token to get user information
           // const decodedToken = jwt_decode(access_token);
           try {
-            if (typeof jwt_decode === 'undefined') {
-              throw new Error('jwt_decode is not defined');
-            }
-            const decodedToken = jwt_decode(access_token);
+            // if (typeof jwt_decode === 'undefined') {
+            //   throw new Error('jwt_decode is not defined');
+            // }
+            const decodedToken = jwt_decode(data.access_token);
             console.log(`decoded token: ${decodedToken}`);
             currentUser = {
               userId: decodedToken.sub, // 'sub' is typically used for userId in JWT
@@ -389,8 +397,7 @@ async function fetchWithAuth(url, options = {}) {
           // await fetchAndDisplayFriends();
         }
       } else {
-        console.error('Login failed:', data.message || 'Unknown error');
-        alert(`Login failed: ${data.message || 'Unknown error'}`);
+
         // console.log(`response: ${JSON.stringify(response)}`);
         // alert('Login failed');
       }
@@ -399,6 +406,45 @@ async function fetchWithAuth(url, options = {}) {
       alert('Login failed');
     }
   });
+
+  async function authenticatedFetch(url, options = {}) {
+    const token = localStorage.getItem('access_token');
+    
+    // Merge the authorization header with existing options
+    const headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+
+    // Make the request with credentials and merged options
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include'  // Always include credentials
+    });
+
+    // Handle 401 Unauthorized errors
+    if (response.status === 401) {
+      // Token might be expired - redirect to login
+      localStorage.removeItem('access_token');
+      window.location.href = '/login.html';  // Adjust path as needed
+      throw new Error('Authentication failed');
+    }
+
+    return response;
+  }
+
+  // Use it like this:
+  async function fetchAndDisplayFriends() {
+    try {
+      const response = await authenticatedFetch(`${host}/friends`);
+      const friends = await response.json();
+      // Handle friends data...
+    } catch (error) {
+      console.error('Error fetching friends:', error);
+    }
+  }  
 
   // Fetch and display friends list
   async function fetchAndDisplayFriends() {
