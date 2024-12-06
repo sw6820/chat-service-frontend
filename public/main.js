@@ -241,6 +241,11 @@ async function fetchWithAuth(url, options = {}) {
         body: JSON.stringify({ username, email, password }),
         credentials: 'include',
         mode: 'cors',
+        body: JSON.stringify({
+          username: username,
+          email: email,
+          password: password
+        }),
       });
 
       // Get the token from Authorization header
