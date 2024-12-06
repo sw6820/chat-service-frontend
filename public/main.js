@@ -237,15 +237,13 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`host: ${host}`);
       const response = await fetch(`${host}/auth/signup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Accept': 'application/json' 
+        },        
         credentials: 'include',
         mode: 'cors',
-        body: JSON.stringify({
-          username: username,
-          email: email,
-          password: password
-        }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       // Get the token from Authorization header
