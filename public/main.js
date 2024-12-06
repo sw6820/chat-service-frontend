@@ -237,10 +237,18 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`host: ${host}`);
       const response = await fetch(`${host}/auth/signup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ username, email, password }),
         credentials: 'include',
+        mode: 'cors',
       });
+
+      // Get the token from Authorization header
+      const authHeader = response.headers.get('Authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        console.log('Token from header:', token);
+      }
 
       console.log(`response text : ${response.text}`);
       console.log(`response: ${JSON.stringify(response)}`);
@@ -310,12 +318,12 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`response body : ${response}`);
       console.log('Response headers:', [...response.headers.entries()]);
 
-          // Get the token from Authorization header
-    const authHeader = response.headers.get('Authorization');
-    if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      console.log('Token from header:', token);
-    }
+      // Get the token from Authorization header
+      const authHeader = response.headers.get('Authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        console.log('Token from header:', token);
+      }
 
       let data;
       try {
