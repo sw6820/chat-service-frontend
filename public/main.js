@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const backendUrl =  `${host}/chat`;
 
 // const host = process.env.NODE_ENV === 'prod' ? backendhost : localhost
-  console.log(`host name : ${window.location.hostname}`);g
+  console.log(`host name : ${window.location.hostname}`);
   // const host = window.location.hostname === '127.0.0.1'
   //   ? localhost
   //   : backendhost;
