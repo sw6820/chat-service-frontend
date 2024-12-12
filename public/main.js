@@ -11,10 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const host = isLocal ? localhost : backendhost;
   console.log(`is local : ${isLocal}, host : ${host}`);
   // Dynamic socket connection based on environment
-  const backendUrl = `${host}`;
+  const backendUrl =  `${host}/chat`;
 
 // const host = process.env.NODE_ENV === 'prod' ? backendhost : localhost
-  console.log(`host name : ${window.location.hostname}`);
+  console.log(`host name : ${window.location.hostname}`);g
   // const host = window.location.hostname === '127.0.0.1'
   //   ? localhost
   //   : backendhost;
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket = io(backendUrl, {
-        transports: ['websocket'],  // Add polling as fallback
+        transports: ['websocket', 'polling'],  // Add polling as fallback
         auth: { token },
         reconnection: true,
         reconnectionAttempts: 5,
