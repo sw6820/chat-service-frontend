@@ -247,12 +247,12 @@ async function fetchWithAuth(url, options = {}) {
       });
 
       // Get the token from Authorization header
-      const authHeader = response.headers.get('Authorization');
-      if (authHeader) {
-        const token = authHeader.replace('Bearer ', '');
-        console.log('Token from header:', token);
-      }
-
+      // const authHeader = response.headers.get('Authorization');
+      // if (authHeader) {
+      //   const token = authHeader.replace('Bearer ', '');
+      //   console.log('Token from header:', token);
+      // }
+      const data = await response.json();
       console.log(`response text : ${response.text}`);
       console.log(`response: ${JSON.stringify(response)}`);
 
@@ -262,13 +262,17 @@ async function fetchWithAuth(url, options = {}) {
 
       console.log('Sign up response:', data);
       currentUser = data.user;
+      console.log(`current user after signup: ${JSON.stringify(currentUser)}`);
       const { access_token } = data;
-      if (access_token) {
-        localStorage.setItem('access_token', access_token);
+      if (data.access_token) {
+        localStorage.setItem('access_token', data.access_token);
         console.log('Access token stored in localStorage');
         try {
-          const decodedToken = jwt_decode(access_token);
+          const decodedToken = jwt_decode(data.access_token);
           console.log(`decoded token: ${decodedToken}`);
+          console.log(`decoded token: ${decodedToken.sub}`);
+          console.log(`decoded token: ${decodedToken.email}`);
+          console.log(`decoded token: ${decodedToken.username}`);
           currentUser = {
             userId: decodedToken.sub, // 'sub' is typically used for userId in JWT
             email: decodedToken.email,
