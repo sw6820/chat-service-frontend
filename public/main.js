@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const host = isLocal ? localhost : backendhost;
   console.log(`is local : ${isLocal}, host : ${host}`);
   // Dynamic socket connection based on environment
-  const backendUrl = `${host}/chat`;
+  const backendUrl = `${host}`;
 
 // const host = process.env.NODE_ENV === 'prod' ? backendhost : localhost
   console.log(`host name : ${window.location.hostname}`);
