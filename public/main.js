@@ -71,6 +71,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const addFriendForm = document.getElementById('add-friend-form');
   const friendIdentifierInput = document.getElementById('friend-identifier');
 
+  // Default headers for fetch
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+  };
+
   // Function to initialize socket connection
   function initializeSocket() {
     const token = localStorage.getItem('access_token');
@@ -80,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket = io(backendUrl, {
-        transports: ['websocket', 'polling'],  // Add polling as fallback
+        transports: ['websocket'],  // Add polling as fallback
         auth: { token },
         reconnection: true,
         reconnectionAttempts: 5,
@@ -201,12 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Update fetch headers with consistent security headers
-const defaultHeaders = {
-    'Content-Type': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest'
-};
-
 // Update your fetch calls to use these headers
 async function fetchWithAuth(url, options = {}) {
     const token = localStorage.getItem('access_token');
@@ -257,7 +257,10 @@ async function fetchWithAuth(url, options = {}) {
       console.log(`response: ${JSON.stringify(response)}`);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // throw new Error(`HTTP error! status: ${response.status}`);
+        console.error(`Sign up failed: ${data.message || 'Unknown error'}`);
+        alert('Sign up failed');
+        return        
       }
 
       console.log('Sign up response:', data);
@@ -326,11 +329,11 @@ async function fetchWithAuth(url, options = {}) {
       console.log('Response headers:', [...response.headers.entries()]);
 
       // Get the token from Authorization header
-      const authHeader = response.headers.get('Authorization');
-      if (authHeader) {
-        const token = authHeader.replace('Bearer ', '');
-        console.log('Token from header:', token);
-      }
+      // const authHeader = response.headers.get('Authorization');
+      // if (authHeader) {
+      //   const token = authHeader.replace('Bearer ', '');
+      //   console.log('Token from header:', token);
+      // }
 
       let data;
       try {
@@ -343,50 +346,51 @@ async function fetchWithAuth(url, options = {}) {
       if (!response.ok) {
         console.error('Login failed:', data.message || 'Unknown error');
         alert(`Login failed: ${data.message || 'Unknown error'}`);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // throw new Error(`HTTP error! status: ${response.status}`);
+        return;
       }
 
-      if (response.ok) {
-        console.log('Login response:', data);
-        console.log('Login response data:', data);
+      
+      console.log('Login response:', data);
+      console.log('Login response data:', data);
 
-        // currentUser = data.user;
-        // const { access_token } = data;
-        if (data.access_token) {
-          localStorage.setItem('access_token', data.access_token);
-          console.log('Access token stored in localStorage');
-          // Decode the JWT token to get user information
-          // const decodedToken = jwt_decode(access_token);
-          try {
-            const decodedToken = jwt_decode(data.access_token);
-            console.log(`decoded token: ${decodedToken}`);
-            currentUser = {
-              userId: decodedToken.sub, // 'sub' is typically used for userId in JWT
-              email: decodedToken.email,
-              username: decodedToken.username
-            };
-            console.log('Current user after login:', currentUser);
-            console.log('Login successful:', {
-              user: currentUser,
-              token: data.access_token
-            });
-            showMainContainer();
-            await fetchAndDisplayFriends();
-            initializeSocket();
-          } catch (error) {
-            console.error('Error with jwt_decode:', error);
-          }
-        } else {
-          console.error('Access token not found in response');
-          alert('Login failed: No access token received');
-          throw new Error(data.message || 'Login failed');
-          // Store the token in localStorage or a cookie if not using HTTP-only cookies
+      // currentUser = data.user;
+      // const { access_token } = data;
+      if (data.access_token) {
+        localStorage.setItem('access_token', data.access_token);
+        console.log('Access token stored in localStorage');
+        // Decode the JWT token to get user information
+        // const decodedToken = jwt_decode(access_token);
+        try {
+          const decodedToken = jwt_decode(data.access_token);
+          console.log(`decoded token: ${decodedToken}`);
+          console.log(`decoded token: ${decodedToken.sub}`);
+          console.log(`decoded token: ${decodedToken.email}`);
+          console.log(`decoded token: ${decodedToken.username}`);
+
+          currentUser = {
+            userId: decodedToken.sub, // 'sub' is typically used for userId in JWT
+            email: decodedToken.email,
+            username: decodedToken.username
+          };
+          console.log('Current user after login:', currentUser);
+          console.log('Login successful:', {
+            user: currentUser,
+            token: data.access_token
+          });
+          showMainContainer();
+          await fetchAndDisplayFriends();
+          initializeSocket();
+        } catch (error) {
+          console.error('Error with jwt_decode:', error);
         }
       } else {
-
-        // console.log(`response: ${JSON.stringify(response)}`);
-        // alert('Login failed');
+        console.error('Access token not found in response');
+        alert('Login failed: No access token received');
+        throw new Error(data.message || 'Login failed');
+        // Store the token in localStorage or a cookie if not using HTTP-only cookies
       }
+
     } catch (error) {
       console.error('Error:', error);
       alert(error.message || 'Login failed. Please try again.');
