@@ -4,7 +4,7 @@ import { io } from "https://cdn.socket.io/4.7.4/socket.io.esm.min.js";
 document.addEventListener('DOMContentLoaded', () => {
   // import jwtDecode from 'jwt-decode';
   const localhost = 'http://localhost:3000';  // Local backend
-  const backendhost = 'https://api.stahc.uk'; // Production backend over HTTP
+  const backendhost = 'http://api.stahc.uk'; // Production backend over HTTP
 
   // Check if the current page is served locally (non-SSL), use HTTP, otherwise HTTPS
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -87,6 +87,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket = io(backendUrl, {
         transports: ['websocket', 'polling'],  // Add polling as fallback
+        // path: "/socket.io",
+        secure: true,
         auth: { token },
         reconnection: true,
         reconnectionAttempts: 5,
@@ -315,10 +317,10 @@ async function fetchWithAuth(url, options = {}) {
         headers: {
           'Content-Type': 'application/json',  // Add this header
           'Accept': 'application/json'
-        },
-        body: JSON.stringify({ email, password }),
+        },        
         credentials: 'include',
         mode: 'cors',
+        body: JSON.stringify({ email, password }),
       });
       console.log(`Response status: ${response.status}`);
       console.log(`response text : ${response.text}`);
