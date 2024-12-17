@@ -98,9 +98,19 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('connect', () => {
         console.log('Connected to server');
         const currentRoomId = chatContainer.dataset.roomId;
+        const friendId = chatContainer.dataset.receiverId;
         if (currentRoomId) {
-            socket.emit('joinRoom', { roomId: currentRoomId });
-        }
+          socket.emit('joinRoom', { 
+            roomId: currentRoomId, 
+            receiverId: parseInt(friendId, 10),
+            userId: currentUser.id,
+            user: {
+                id: currentUser.id,
+                email: currentUser.email,
+                name: currentUser.name
+            },
+          });
+        }      
     });
 
     socket.on('connect_error', (error) => {
@@ -120,8 +130,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('newMessage', (message) => {
       console.log('New message received:', message);
-      const senderType = message.senderUserId === currentUser.id ? 'me' : 'other';
-      const formattedTime = formatMessageTime(message.timestamp || message.createdAt);
+      // console.log(`message in new message ${JSON.stringify(message)}`);
+      const senderType = message.senderUserId === currentUser.userId ? 'me' : 'other';
+      const formattedTime = formatMessageTime(message.createdAt);
+      // console.log(`formatted timestamp: ${message.timestamp}`);
+      // console.log(`formatted created time: ${message.createdAt}`);
       appendMessage(message.content, senderType, formattedTime);
     });
   }
@@ -227,7 +240,7 @@ async function fetchWithAuth(url, options = {}) {
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
 
-    console.log(`email: ${email} password: ${password} user: ${username}`);
+    // console.log(`email: ${email} password: ${password} user: ${username}`);
 
     try {
       console.log(`host: ${host}`);
@@ -273,7 +286,7 @@ async function fetchWithAuth(url, options = {}) {
           console.log(`decoded token: ${decodedToken.email}`);
           console.log(`decoded token: ${decodedToken.username}`);
           currentUser = {
-            userId: decodedToken.sub, // 'sub' is typically used for userId in JWT
+            userId: decodedToken.sub,
             email: decodedToken.email,
             username: decodedToken.username
           };
@@ -302,7 +315,7 @@ async function fetchWithAuth(url, options = {}) {
     const password = document.getElementById('login-password').value;
     console.log(`Attempting login for email: ${email}`);
 
-    console.log(`email: ${email} password: ${password} `);
+    // console.log(`email: ${email} password: ${password} `);
 
     try {
       console.log(`Sending login request to: ${host}/auth/login`);
@@ -659,7 +672,12 @@ async function fetchWithAuth(url, options = {}) {
       roomId: parseInt(roomId, 10),
       receiverId: parseInt(receiverId, 10),
       content: messageText,
-      userId: currentUser.id,
+      userId: currentUser.userId,
+      user: {
+        id: currentUser.userId,
+        email: currentUser.email,
+        name: currentUser.name
+      },
       timestamp: new Date().toISOString(),
     };
 
@@ -733,16 +751,31 @@ async function fetchWithAuth(url, options = {}) {
           const data = await response.json();
           chatContainer.dataset.roomId = data.roomId;
           chatContainer.dataset.receiverId = friendId;
+          console.log(`data in join room response ${JSON.stringify(data)}`);
           socket.emit('joinRoom', { 
             roomId: data.roomId, 
-            receiverId: parseInt(friendId, 10) 
+            receiverId: parseInt(friendId, 10),
+            userId: currentUser.userId,
+            user: {
+                id: currentUser.userId,
+                email: currentUser.email,
+                name: currentUser.name
+            },
           });
           showChatContainer();
           await loadChatRoom(data.roomId, friendId);
         } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Failed to create or find room:', response.status, errorData);
-          alert(`Failed to create or find room: ${errorData.message || response.statusText}`);
+          // const errorData = await response.json().catch(() => ({}));
+          // console.error('Failed to create or find room:', response.status, errorData);
+          // alert(`Failed to create or find room: ${errorData.message || response.statusText}`);
+          if (response.status === 401) {
+            console.error('Unauthorized: Token may be invalid');
+            localStorage.removeItem('access_token');
+            showAuthContainer();
+          } else {
+              console.error('Failed to load chat room');
+              alert('Failed to load chat room');
+          }
         }
       } catch (error) {
         console.error('Error:', error);
@@ -753,6 +786,7 @@ async function fetchWithAuth(url, options = {}) {
 
   function formatMessageTime(dateString) {
     const date = new Date(dateString);
+    console.log(`format date : ${date}`);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
@@ -765,6 +799,7 @@ async function fetchWithAuth(url, options = {}) {
         showAuthContainer();
         return;
       }
+      console.log(`token : ${token}`);
       const response = await fetch(`${host}/chat/rooms/${roomId}/logs`, {
         method: 'GET',
         headers: {
@@ -773,7 +808,7 @@ async function fetchWithAuth(url, options = {}) {
         },
         credentials: 'include',
       });
-      console.log(`Load chat room response status: ${response.status}`);
+      // console.log(`Load chat room response status: ${response.status}`);
       console.log(`response: ${JSON.stringify(response)}`);
       if (response.ok) {
         const data = await response.json();
@@ -785,7 +820,7 @@ async function fetchWithAuth(url, options = {}) {
         chatContainer.dataset.receiverId = receiverId;
 
         data.messages.forEach((message) => {
-          console.log(`message : ${JSON.stringify(message)}`)
+          // console.log(`message : ${JSON.stringify(message)}`)
           console.log(`currentUser : ${JSON.stringify(currentUser)}`)
           const senderType =
             message.user.id === currentUser.userId ? 'me' : 'other';
