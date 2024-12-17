@@ -86,8 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     socket = io(backendUrl, {
-        transports: ['websocket', 'polling'],  // Add polling as fallback
-        // path: "/socket.io",
+        transports: ['websocket', 'polling'],
         secure: true,
         auth: { token },
         reconnection: true,
@@ -96,14 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
         timeout: 10000
     });
 
-    // Add reconnect listeners
-    socket.on('reconnect_attempt', () => {
-        console.log('Attempting to reconnect...');
-    });
-
-        socket.on('reconnect', () => {
-        console.log('Reconnected to server');
-        // Rejoin the current room if any
+    socket.on('connect', () => {
+        console.log('Connected to server');
         const currentRoomId = chatContainer.dataset.roomId;
         if (currentRoomId) {
             socket.emit('joinRoom', { roomId: currentRoomId });
@@ -112,25 +105,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('connect_error', (error) => {
       console.error('Connection error:', error);
+      if (error.message === 'User not authenticated') {
+        showAuthContainer();
+      }
     });
 
     socket.on('disconnect', (reason) => {
       console.log('Disconnected:', reason);
     });
 
-    // Add listener to confirm when a room is joined
     socket.on('roomJoined', (roomId) => {
       console.log('Successfully joined room:', roomId);
     });
 
-    // Listen for new messages
     socket.on('newMessage', (message) => {
-      console.log(`New message received: ${JSON.stringify(message)}`);
-      const senderType = message.user.id === currentUser.userId ? 'me' : 'other';
-      const formattedTime = formatMessageTime(message.createdAt);
-      // console.log(`Formatted time: ${formattedTime}`);
+      console.log('New message received:', message);
+      const senderType = message.senderUserId === currentUser.id ? 'me' : 'other';
+      const formattedTime = formatMessageTime(message.timestamp || message.createdAt);
       appendMessage(message.content, senderType, formattedTime);
-
     });
   }
 
@@ -212,10 +204,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // Update your fetch calls to use these headers
 async function fetchWithAuth(url, options = {}) {
     const token = localStorage.getItem('access_token');
+    
+    // Merge the authorization header with existing options
     const headers = {
-        ...defaultHeaders,
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        ...options.headers
+      ...defaultHeaders,
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...options.headers
     };
 
     return fetch(url, {
@@ -646,8 +640,9 @@ async function fetchWithAuth(url, options = {}) {
     if (!messageText) return;
 
     const roomId = chatContainer.dataset.roomId; // Assume roomId is set as a data attribute
+    const receiverId = chatContainer.dataset.receiverId;
     console.log(`client room id: ${roomId}`);
-    if (!roomId) {
+    if (!roomId || !receiverId) {
         console.error('No room ID found');
         alert('Please select a chat room first');
         return;
@@ -662,12 +657,13 @@ async function fetchWithAuth(url, options = {}) {
 
     const message = {
       roomId: parseInt(roomId, 10),
+      receiverId: parseInt(receiverId, 10),
       content: messageText,
       userId: currentUser.id,
       timestamp: new Date().toISOString(),
     };
 
-    console.log('Sending message(debug):', message); // Debug log
+    console.log('Sending message:', message);
     
     // Clear input before sending to improve perceived performance
     messageInput.value = '';
@@ -736,9 +732,13 @@ async function fetchWithAuth(url, options = {}) {
           console.log('ok and joinroom');
           const data = await response.json();
           chatContainer.dataset.roomId = data.roomId;
-          socket.emit('joinRoom', { roomId: data.roomId });
+          chatContainer.dataset.receiverId = friendId;
+          socket.emit('joinRoom', { 
+            roomId: data.roomId, 
+            receiverId: parseInt(friendId, 10) 
+          });
           showChatContainer();
-          await loadChatRoom(data.roomId);
+          await loadChatRoom(data.roomId, friendId);
         } else {
           const errorData = await response.json().catch(() => ({}));
           console.error('Failed to create or find room:', response.status, errorData);
@@ -756,7 +756,7 @@ async function fetchWithAuth(url, options = {}) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  async function loadChatRoom(roomId) {
+  async function loadChatRoom(roomId, receiverId) {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) {
@@ -782,6 +782,7 @@ async function fetchWithAuth(url, options = {}) {
 
         chatMessages.innerHTML = '';
         chatContainer.dataset.roomId = roomId;
+        chatContainer.dataset.receiverId = receiverId;
 
         data.messages.forEach((message) => {
           console.log(`message : ${JSON.stringify(message)}`)
